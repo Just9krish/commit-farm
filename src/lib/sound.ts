@@ -3,7 +3,7 @@
  * The AudioContext is created lazily on first use (i.e. first user gesture).
  */
 
-export type SoundKind = 'click' | 'buy' | 'achievement' | 'prestige'
+export type SoundKind = 'click' | 'buy' | 'achievement' | 'prestige' | 'golden'
 
 let audioContext: AudioContext | null = null
 
@@ -78,6 +78,23 @@ const SOUNDS: Record<SoundKind, () => void> = {
   prestige: () => {
     playTone({ frequency: 220, durationSec: 0.35, type: 'sawtooth', peakGain: 0.03, glideTo: 880 })
     playTone({ frequency: 880, durationSec: 0.2, delaySec: 0.3, type: 'triangle', peakGain: 0.05 })
+  },
+  golden: () => {
+    playTone({ frequency: 784, durationSec: 0.08, type: 'triangle', peakGain: 0.05 })
+    playTone({
+      frequency: 988,
+      durationSec: 0.08,
+      delaySec: 0.07,
+      type: 'triangle',
+      peakGain: 0.05,
+    })
+    playTone({
+      frequency: 1319,
+      durationSec: 0.2,
+      delaySec: 0.14,
+      type: 'triangle',
+      peakGain: 0.06,
+    })
   },
 }
 

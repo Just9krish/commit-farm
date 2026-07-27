@@ -15,7 +15,10 @@ export function TopBar() {
       </div>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="cursor-default rounded-[5px] border border-amber-dim bg-amber/5 px-2.5 py-1.5 font-mono text-[13px] text-amber tabular-nums">
+          <div
+            key={stars}
+            className="animate-star-pop cursor-default rounded-[5px] border border-amber-dim bg-amber/5 px-2.5 py-1.5 font-mono text-[13px] text-amber tabular-nums"
+          >
             ★ {stars} investor stars · +{Math.round(stars * 2)}% boost
           </div>
         </TooltipTrigger>

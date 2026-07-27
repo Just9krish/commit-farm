@@ -31,15 +31,60 @@ export interface AchievementDef {
   test: (save: GameSave) => boolean
 }
 
+/** What an upgrade multiplies: one generator's output, all production, or click power. */
+export type UpgradeTarget = GeneratorId | 'all' | 'click'
+
+/** Visibility gate: either owning enough of a generator, or lifetime LOC. */
+export type UpgradeUnlock = { generator: GeneratorId; owned: number } | { totalLoc: number }
+
+export interface UpgradeDef {
+  id: string
+  name: string
+  description: string
+  cost: number
+  target: UpgradeTarget
+  multiplier: number
+  unlock: UpgradeUnlock
+}
+
+/**
+ * Perks are bought by SPENDING investor stars (reducing the passive boost),
+ * and persist across funding rounds.
+ */
+export type PerkId =
+  | 'head-start'
+  | 'angel-network'
+  | 'hype-machine'
+  | 'crunch-insurance'
+  | 'golden-fingers'
+  | 'preferred-terms'
+
+export interface PerkDef {
+  id: PerkId
+  name: string
+  description: string
+  starCost: number
+}
+
 /** The persisted portion of the game state. */
 export interface GameSave {
   version: number
   loc: number
   totalLoc: number
+  /** LOC earned in the current run (resets on prestige). */
+  runLoc: number
+  /** Highest single-run LOC ever reached. */
+  bestRunLoc: number
+  totalClicks: number
+  goldenClicks: number
+  /** Active play time in seconds (only counts while the tab is visible). */
+  playTimeSec: number
   stars: number
   prestigeCount: number
   generators: Record<GeneratorId, GeneratorState>
   achievements: Record<string, boolean>
+  upgrades: Record<string, boolean>
+  perks: Record<string, boolean>
   isMuted: boolean
   lastSavedAt: number
 }
@@ -49,7 +94,16 @@ export interface ActiveEvent {
   endsAt: number
 }
 
-export type LogCategory = 'buy' | 'click' | 'prestige' | 'event' | 'ach'
+/** A golden commit floating on screen, waiting to be clicked. */
+export interface ActiveGolden {
+  hash: string
+  xPct: number
+  yPct: number
+  expiresAt: number
+}
+
+export type LogCategory =
+  'buy' | 'click' | 'prestige' | 'event' | 'ach' | 'upgrade' | 'perk' | 'golden'
 
 export interface LogEntry {
   id: number

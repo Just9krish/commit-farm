@@ -78,6 +78,12 @@
   --animate-rise-in: rise-in 200ms var(--ease-snappy) both;
   --animate-desk-in: desk-in 180ms var(--ease-snappy) both;
   --animate-blink: blink 1.2s steps(1) infinite;
+  --animate-golden:
+    golden-pop 300ms var(--ease-snappy) both, golden-pulse 1.6s ease-in-out 300ms infinite;
+  --animate-float-up: float-up 650ms var(--ease-snappy) both;
+  --animate-prestige-flash: prestige-flash 900ms ease-out both;
+  --animate-prestige-stars: prestige-stars 1600ms var(--ease-snappy) both;
+  --animate-star-pop: star-pop 500ms var(--ease-snappy) both;
 
   @keyframes rise-in {
     from {
@@ -104,6 +110,87 @@
   @keyframes blink {
     50% {
       opacity: 0;
+    }
+  }
+
+  @keyframes golden-pop {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.5);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+
+  @keyframes float-up {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, 0) scale(0.9);
+    }
+    15% {
+      opacity: 1;
+      transform: translate(-50%, -8px) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -44px) scale(1);
+    }
+  }
+
+  @keyframes prestige-flash {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes prestige-stars {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.7);
+    }
+    20% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.1);
+    }
+    30% {
+      transform: translate(-50%, -50%) scale(1);
+    }
+    75% {
+      opacity: 1;
+      transform: translate(-50%, -60%) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -90%) scale(1);
+    }
+  }
+
+  @keyframes star-pop {
+    0% {
+      transform: scale(1);
+    }
+    40% {
+      transform: scale(1.35);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes golden-pulse {
+    0%,
+    100% {
+      transform: translate(-50%, -50%) scale(1);
+      box-shadow: 0 0 12px rgb(242 169 59 / 0.35);
+    }
+    50% {
+      transform: translate(-50%, -50%) scale(1.08);
+      box-shadow: 0 0 24px rgb(242 169 59 / 0.6);
     }
   }
 }

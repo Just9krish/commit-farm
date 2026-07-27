@@ -1,8 +1,9 @@
+import { useEffect, useRef, useState } from 'react'
 import { GamePanel, PanelHeading } from './game-panel'
 import { OfficeFloor } from './office-floor'
 import { PrestigeSection } from './prestige-section'
 import { formatNumber } from '@/game/logic'
-import { selectProductionRate, useGameStore } from '@/stores/game-store'
+import { selectClickPower, selectProductionRate, useGameStore } from '@/stores/game-store'
 
 export function CodePanel() {
   return (
@@ -34,17 +35,87 @@ function LocStats() {
 
 function WriteButton() {
   const writeCode = useGameStore((s) => s.writeCode)
+  const { motes, buttonRef, handlePointerDown, removeMote } = useClickMotes()
 
   return (
     <>
-      <button
-        type="button"
-        onClick={writeCode}
-        className="mt-3.5 w-full rounded-lg border border-amber-dim bg-gradient-to-b from-amber/15 to-amber/5 px-2.5 py-5 font-mono text-[15px] font-bold tracking-[0.03em] text-amber transition-transform duration-100 ease-snappy select-none hover:from-amber/25 hover:to-amber/10 active:scale-[0.98] focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
-      >
-        &gt; write_code()
-      </button>
+      <div className="relative">
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={writeCode}
+          onPointerDown={handlePointerDown}
+          className="mt-3.5 w-full rounded-lg border border-amber-dim bg-gradient-to-b from-amber/15 to-amber/5 px-2.5 py-5 font-mono text-[15px] font-bold tracking-[0.03em] text-amber transition-transform duration-100 ease-snappy select-none hover:from-amber/25 hover:to-amber/10 active:scale-[0.98] focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+        >
+          &gt; write_code()
+        </button>
+        {motes.map((mote) => (
+          <span
+            key={mote.id}
+            onAnimationEnd={() => removeMote(mote.id)}
+            style={{ left: mote.x, top: mote.y }}
+            className="pointer-events-none absolute z-10 animate-float-up font-mono text-[13px] font-bold text-amber tabular-nums"
+            aria-hidden
+          >
+            {mote.label}
+          </span>
+        ))}
+      </div>
       <p className="mt-1.5 text-center text-[11px] text-ink-dim">click, or press space</p>
     </>
   )
+}
+
+interface ClickMote {
+  id: number
+  x: number
+  y: number
+  label: string
+}
+
+const MAX_MOTES = 12
+const POINTER_FRESH_MS = 150
+
+/**
+ * Spawns a floating "+N" for every click, driven by totalClicks changes so
+ * spacebar presses produce feedback too. Mouse clicks anchor to the pointer;
+ * keyboard clicks scatter across the button.
+ */
+function useClickMotes() {
+  const [motes, setMotes] = useState<Array<ClickMote>>([])
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const pointerRef = useRef<{ x: number; y: number; at: number } | null>(null)
+  const nextIdRef = useRef(1)
+
+  function handlePointerDown(event: React.PointerEvent<HTMLButtonElement>) {
+    const rect = event.currentTarget.getBoundingClientRect()
+    pointerRef.current = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+      at: performance.now(),
+    }
+  }
+
+  function removeMote(id: number) {
+    setMotes((current) => current.filter((mote) => mote.id !== id))
+  }
+
+  useEffect(() => {
+    return useGameStore.subscribe((state, prev) => {
+      if (state.totalClicks === prev.totalClicks) return
+      const button = buttonRef.current
+      if (!button) return
+      const pointer = pointerRef.current
+      const isFresh = pointer !== null && performance.now() - pointer.at < POINTER_FRESH_MS
+      const x = isFresh ? pointer.x : button.offsetWidth * (0.25 + Math.random() * 0.5)
+      const y = (isFresh ? pointer.y : 14) + button.offsetTop
+      const label = `+${formatNumber(selectClickPower(state))}`
+      setMotes((current) => [
+        ...current.slice(-(MAX_MOTES - 1)),
+        { id: nextIdRef.current++, x, y, label },
+      ])
+    })
+  }, [])
+
+  return { motes, buttonRef, handlePointerDown, removeMote }
 }

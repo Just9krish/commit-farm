@@ -7,3 +7,4 @@ dist-ssr
 .vinxi
 package-lock.json
 src/routeTree.gen.ts
+public/icons

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Commit Farm">
+  <rect width="512" height="512" rx="96" fill="#14171C"/>
+  <rect x="48" y="48" width="416" height="416" rx="64" fill="#1B1F26" stroke="#2E3540" stroke-width="8"/>
+  <!-- caret: greater-than -->
+  <path fill="#F2A93B" d="M128 160 L240 256 L128 352 L160 352 L272 256 L160 160 Z"/>
+  <!-- caret: underscore blink bar -->
+  <rect x="288" y="300" width="96" height="28" rx="6" fill="#F2A93B"/>
+  <!-- desk glyphs -->
+  <rect x="128" y="392" width="48" height="48" rx="8" fill="#E8E6E1" opacity="0.85"/>
+  <polygon points="232,392 280,440 184,440" fill="#7FB77E"/>
+  <polygon points="336,392 360,440 312,440 360,344 384,392 408,344 408,440 360,440" fill="#6E9BEF"/>
+</svg>

@@ -8,14 +8,26 @@ import {
   EVENT_CHANCE_PER_TICK,
   EVENT_DEFS,
   GENERATOR_DEFS,
+  GOLDEN_LIFETIME_SEC,
+  GOLDEN_MAX_GAP_SEC,
+  GOLDEN_MIN_GAP_SEC,
+  HEAD_START_INTERNS,
   MAX_LOG_ENTRIES,
   MAX_TICK_DELTA_SEC,
+  PERK_DEFS,
+  UPGRADE_DEFS,
   WELCOME_BACK_MIN_SEC,
 } from '@/game/definitions'
 import {
   bulkCost,
   clickPower,
+  costMultiplier,
+  effectiveEventMult,
+  formatNumber,
   freshSave,
+  goldenReward,
+  hasPerk,
+  isUpgradeUnlocked,
   maxAffordable,
   offlineEarnings,
   prestigeGain,
@@ -23,16 +35,19 @@ import {
 } from '@/game/logic'
 import type {
   ActiveEvent,
+  ActiveGolden,
   BuyQuantity,
   GameSave,
   GeneratorId,
   LogCategory,
   LogEntry,
+  PerkId,
 } from '@/game/types'
 import { playSound } from '@/lib/sound'
 
 const SAVE_KEY = 'commit-farm-save-v1'
 const SAVE_THROTTLE_MS = 2000
+const EXPORT_PREFIX = 'CF1.'
 
 export interface WelcomeBackInfo {
   earnedLoc: number
@@ -42,6 +57,8 @@ export interface WelcomeBackInfo {
 interface GameStore extends GameSave {
   // runtime (not persisted)
   activeEvent: ActiveEvent | null
+  golden: ActiveGolden | null
+  nextGoldenAt: number
   log: Array<LogEntry>
   buyQuantity: BuyQuantity
   welcomeBack: WelcomeBackInfo | null
@@ -51,6 +68,9 @@ interface GameStore extends GameSave {
   // actions
   writeCode: () => void
   buyGenerator: (id: GeneratorId) => void
+  buyUpgrade: (id: string) => void
+  buyPerk: (id: PerkId) => void
+  clickGoldenCommit: () => void
   prestige: () => void
   tick: (nowMs: number) => void
   startSession: () => void
@@ -59,6 +79,10 @@ interface GameStore extends GameSave {
   setBuyQuantity: (quantity: BuyQuantity) => void
   toggleMute: () => void
   resetSave: () => void
+  /** Serializes the persisted save as a portable string. */
+  exportSave: () => string
+  /** Loads a save exported via exportSave. Returns false when the data is invalid. */
+  importSave: (payload: string) => boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -102,14 +126,84 @@ function unlockAchievements(
     if (achievements[def.id] || !def.test({ ...save, achievements })) continue
     achievements = { ...achievements, [def.id]: true }
     nextLog = appendLog(nextLog, 'ach', { a: def.label })
-    toast.success(`Achievement unlocked — ${def.label}`)
+    toast.success(`Achievement unlocked — ${def.label}`, {
+      description: '+1% production, forever',
+    })
     if (!isMuted) playSound('achievement')
   }
   return { achievements, log: nextLog }
 }
 
-function eventMult(event: ActiveEvent | null, kind: 'prod' | 'click'): number {
-  return event?.def.mult[kind] ?? 1
+/** The persisted slice of the store (used for autosave and export). */
+function toSave(s: GameSave): GameSave {
+  return {
+    version: s.version,
+    loc: s.loc,
+    totalLoc: s.totalLoc,
+    runLoc: s.runLoc,
+    bestRunLoc: s.bestRunLoc,
+    totalClicks: s.totalClicks,
+    goldenClicks: s.goldenClicks,
+    playTimeSec: s.playTimeSec,
+    stars: s.stars,
+    prestigeCount: s.prestigeCount,
+    generators: s.generators,
+    achievements: s.achievements,
+    upgrades: s.upgrades,
+    perks: s.perks,
+    isMuted: s.isMuted,
+    lastSavedAt: Date.now(),
+  }
+}
+
+/** Merges a (possibly older) saved snapshot over fresh defaults. */
+function mergeSave(saved: Partial<GameSave>): GameSave {
+  const fresh = freshSave()
+  return {
+    ...fresh,
+    ...saved,
+    // new content added in future versions gets default entries
+    generators: { ...fresh.generators, ...saved.generators },
+    achievements: { ...saved.achievements },
+    upgrades: { ...saved.upgrades },
+    perks: { ...saved.perks },
+  }
+}
+
+type GainFields = Pick<GameSave, 'loc' | 'totalLoc' | 'runLoc' | 'bestRunLoc'>
+
+/** All LOC gains flow through here so run/lifetime/best-run stats stay in sync. */
+function applyGain(s: GameSave, gain: number): GainFields {
+  const runLoc = s.runLoc + gain
+  return {
+    loc: s.loc + gain,
+    totalLoc: s.totalLoc + gain,
+    runLoc,
+    bestRunLoc: Math.max(s.bestRunLoc, runLoc),
+  }
+}
+
+function eventMult(
+  s: GameSave & { activeEvent: ActiveEvent | null },
+  kind: 'prod' | 'click',
+): number {
+  const rawMult = s.activeEvent?.def.mult[kind] ?? 1
+  return effectiveEventMult({ save: s, mult: rawMult })
+}
+
+function scheduleNextGolden(nowMs: number): number {
+  const gapSec = GOLDEN_MIN_GAP_SEC + Math.random() * (GOLDEN_MAX_GAP_SEC - GOLDEN_MIN_GAP_SEC)
+  return nowMs + gapSec * 1000
+}
+
+function spawnGolden(nowMs: number): ActiveGolden {
+  return {
+    hash: Math.random().toString(16).slice(2, 9),
+    // keep away from screen edges so it never hides under panels' extremes
+    xPct: 15 + Math.random() * 70,
+    yPct: 20 + Math.random() * 55,
+    expiresAt: nowMs + GOLDEN_LIFETIME_SEC * 1000,
+  }
 }
 
 /**
@@ -173,6 +267,8 @@ export const useGameStore = create<GameStore>()(
     (set, get) => ({
       ...freshSave(),
       activeEvent: null,
+      golden: null,
+      nextGoldenAt: scheduleNextGolden(Date.now()),
       log: [],
       buyQuantity: '1',
       welcomeBack: null,
@@ -184,14 +280,15 @@ export const useGameStore = create<GameStore>()(
         const s = get()
         const gain = clickPower({
           save: s,
-          eventClickMult: eventMult(s.activeEvent, 'click'),
+          eventClickMult: eventMult(s, 'click'),
         })
-        const save: GameSave = { ...s, loc: s.loc + gain, totalLoc: s.totalLoc + gain }
+        const gained = applyGain(s, gain)
+        const save: GameSave = { ...s, ...gained, totalClicks: s.totalClicks + 1 }
         let log = s.log
         if (Math.random() < CLICK_LOG_CHANCE) log = appendLog(log, 'click')
         const unlocked = unlockAchievements(save, log, s.isMuted)
         if (!s.isMuted) playSound('click')
-        set({ loc: save.loc, totalLoc: save.totalLoc, ...unlocked })
+        set({ ...gained, totalClicks: save.totalClicks, ...unlocked })
       },
 
       buyGenerator: (id) => {
@@ -199,12 +296,13 @@ export const useGameStore = create<GameStore>()(
         const def = GENERATOR_DEFS.find((g) => g.id === id)
         if (!def) return
         const owned = s.generators[id].owned
+        const costMult = costMultiplier(s)
         const qty =
           s.buyQuantity === 'max'
-            ? maxAffordable({ def, owned, budget: s.loc })
+            ? maxAffordable({ def, owned, budget: s.loc, costMult })
             : Number(s.buyQuantity)
         if (qty < 1) return
-        const cost = bulkCost({ def, owned, qty })
+        const cost = bulkCost({ def, owned, qty, costMult })
         if (s.loc < cost) return
         const generators = { ...s.generators, [id]: { owned: owned + qty } }
         const save: GameSave = { ...s, loc: s.loc - cost, generators }
@@ -214,28 +312,80 @@ export const useGameStore = create<GameStore>()(
         set({ loc: save.loc, generators, ...unlocked })
       },
 
+      buyUpgrade: (id) => {
+        const s = get()
+        const def = UPGRADE_DEFS.find((u) => u.id === id)
+        if (!def || s.upgrades[def.id]) return
+        if (s.loc < def.cost || !isUpgradeUnlocked({ save: s, def })) return
+        const upgrades = { ...s.upgrades, [def.id]: true }
+        const save: GameSave = { ...s, loc: s.loc - def.cost, upgrades }
+        const log = appendLog(s.log, 'upgrade', { u: def.name })
+        const unlocked = unlockAchievements(save, log, s.isMuted)
+        if (!s.isMuted) playSound('buy')
+        set({ loc: save.loc, upgrades, ...unlocked })
+      },
+
+      clickGoldenCommit: () => {
+        const s = get()
+        if (!s.golden) return
+        const gain = goldenReward(s)
+        const gained = applyGain(s, gain)
+        const save: GameSave = { ...s, ...gained, goldenClicks: s.goldenClicks + 1 }
+        const log = appendLog(s.log, 'golden', { n: formatNumber(gain) })
+        const unlocked = unlockAchievements(save, log, s.isMuted)
+        toast.success(`Golden commit! +${formatNumber(gain)} LOC`)
+        if (!s.isMuted) playSound('golden')
+        set({
+          ...gained,
+          goldenClicks: save.goldenClicks,
+          golden: null,
+          nextGoldenAt: scheduleNextGolden(Date.now()),
+          ...unlocked,
+        })
+      },
+
+      buyPerk: (id) => {
+        const s = get()
+        const def = PERK_DEFS.find((p) => p.id === id)
+        if (!def || s.perks[def.id] || s.stars < def.starCost) return
+        const perks = { ...s.perks, [def.id]: true }
+        const save: GameSave = { ...s, stars: s.stars - def.starCost, perks }
+        const log = appendLog(s.log, 'perk', { p: def.name })
+        const unlocked = unlockAchievements(save, log, s.isMuted)
+        if (!s.isMuted) playSound('buy')
+        set({ stars: save.stars, perks, ...unlocked })
+      },
+
       prestige: () => {
         const s = get()
         const gain = prestigeGain(s.totalLoc)
         if (gain < 1) return
         const generators = Object.fromEntries(
-          GENERATOR_DEFS.map((g) => [g.id, { owned: 0 }]),
+          GENERATOR_DEFS.map((g) => [
+            g.id,
+            { owned: g.id === 'intern' && hasPerk(s, 'head-start') ? HEAD_START_INTERNS : 0 },
+          ]),
         ) as Record<GeneratorId, { owned: number }>
         const save: GameSave = {
           ...s,
           loc: 0,
+          runLoc: 0,
           stars: s.stars + gain,
           prestigeCount: s.prestigeCount + 1,
           generators,
+          // upgrades reset with the run; stars are the permanent progression
+          upgrades: {},
         }
         const log = appendLog(s.log, 'prestige')
         const unlocked = unlockAchievements(save, log, s.isMuted)
         if (!s.isMuted) playSound('prestige')
         set({
           loc: 0,
+          runLoc: 0,
           stars: save.stars,
           prestigeCount: save.prestigeCount,
           generators,
+          upgrades: {},
           ...unlocked,
         })
       },
@@ -248,21 +398,37 @@ export const useGameStore = create<GameStore>()(
         let activeEvent = s.activeEvent
         let log = s.log
         if (activeEvent && nowMs > activeEvent.endsAt) activeEvent = null
-        if (!activeEvent && Math.random() < EVENT_CHANCE_PER_TICK) {
+        const eventChance = EVENT_CHANCE_PER_TICK * (hasPerk(s, 'hype-machine') ? 2 : 1)
+        if (!activeEvent && Math.random() < eventChance) {
           const def = EVENT_DEFS[Math.floor(Math.random() * EVENT_DEFS.length)]
           activeEvent = { def, endsAt: nowMs + def.durationSec * 1000 }
           log = appendLog(log, 'event', { e: def.label })
         }
 
+        let golden = s.golden
+        let nextGoldenAt = s.nextGoldenAt
+        if (golden && nowMs > golden.expiresAt) {
+          golden = null
+          nextGoldenAt = scheduleNextGolden(nowMs)
+        } else if (!golden && nowMs >= nextGoldenAt) {
+          golden = spawnGolden(nowMs)
+        }
+
         const gain =
-          productionRate({ save: s, eventProdMult: eventMult(activeEvent, 'prod') }) * dtSec
-        const save: GameSave = { ...s, loc: s.loc + gain, totalLoc: s.totalLoc + gain }
+          productionRate({
+            save: s,
+            eventProdMult: eventMult({ ...s, activeEvent }, 'prod'),
+          }) * dtSec
+        const gained = applyGain(s, gain)
+        const save: GameSave = { ...s, ...gained }
         const unlocked = unlockAchievements(save, log, s.isMuted)
         set({
-          loc: save.loc,
-          totalLoc: save.totalLoc,
+          ...gained,
+          playTimeSec: s.playTimeSec + dtSec,
           lastTickAt: nowMs,
           activeEvent,
+          golden,
+          nextGoldenAt,
           ...unlocked,
         })
       },
@@ -282,15 +448,11 @@ export const useGameStore = create<GameStore>()(
         const s = get()
         const earned = offlineEarnings({ save: s, elapsedSec: awaySec })
         const showDialog = awaySec > WELCOME_BACK_MIN_SEC && earned > 0
-        const save: GameSave = {
-          ...s,
-          loc: s.loc + earned,
-          totalLoc: s.totalLoc + earned,
-        }
+        const gained = applyGain(s, earned)
+        const save: GameSave = { ...s, ...gained }
         const unlocked = unlockAchievements(save, s.log, s.isMuted)
         set({
-          loc: save.loc,
-          totalLoc: save.totalLoc,
+          ...gained,
           lastTickAt: Date.now(),
           welcomeBack: showDialog ? { earnedLoc: earned, awaySec } : s.welcomeBack,
           ...unlocked,
@@ -305,38 +467,48 @@ export const useGameStore = create<GameStore>()(
         set({
           ...freshSave(),
           activeEvent: null,
+          golden: null,
+          nextGoldenAt: scheduleNextGolden(Date.now()),
           log: [makeLogEntry('buy', { n: 'you' })],
           welcomeBack: null,
           lastTickAt: Date.now(),
         }),
+
+      exportSave: () => EXPORT_PREFIX + btoa(JSON.stringify(toSave(get()))),
+
+      importSave: (payload) => {
+        const trimmed = payload.trim()
+        if (!trimmed.startsWith(EXPORT_PREFIX)) return false
+        let parsed: unknown
+        try {
+          parsed = JSON.parse(atob(trimmed.slice(EXPORT_PREFIX.length)))
+        } catch {
+          return false
+        }
+        if (typeof parsed !== 'object' || parsed === null) return false
+        const saved = parsed as Partial<GameSave>
+        if (typeof saved.totalLoc !== 'number' || typeof saved.version !== 'number') return false
+        set({
+          ...mergeSave(saved),
+          activeEvent: null,
+          golden: null,
+          nextGoldenAt: scheduleNextGolden(Date.now()),
+          welcomeBack: null,
+          lastTickAt: Date.now(),
+        })
+        return true
+      },
     }),
     {
       name: SAVE_KEY,
       version: 1,
       storage: createJSONStorage(createThrottledStorage),
       skipHydration: true,
-      partialize: (s): GameSave => ({
-        version: s.version,
-        loc: s.loc,
-        totalLoc: s.totalLoc,
-        stars: s.stars,
-        prestigeCount: s.prestigeCount,
-        generators: s.generators,
-        achievements: s.achievements,
-        isMuted: s.isMuted,
-        lastSavedAt: Date.now(),
+      partialize: (s): GameSave => toSave(s),
+      merge: (persisted, current) => ({
+        ...current,
+        ...mergeSave((persisted ?? {}) as Partial<GameSave>),
       }),
-      merge: (persisted, current) => {
-        const saved = (persisted ?? {}) as Partial<GameSave>
-        const fresh = freshSave()
-        return {
-          ...current,
-          ...saved,
-          // new generators added in future versions get default entries
-          generators: { ...fresh.generators, ...saved.generators },
-          achievements: { ...saved.achievements },
-        }
-      },
     },
   ),
 )
@@ -348,9 +520,9 @@ useGameStore.persist.onFinishHydration(() => {
 // -- selectors ---------------------------------------------------------------
 
 export function selectProductionRate(s: GameStore): number {
-  return productionRate({ save: s, eventProdMult: eventMult(s.activeEvent, 'prod') })
+  return productionRate({ save: s, eventProdMult: eventMult(s, 'prod') })
 }
 
 export function selectClickPower(s: GameStore): number {
-  return clickPower({ save: s, eventClickMult: eventMult(s.activeEvent, 'click') })
+  return clickPower({ save: s, eventClickMult: eventMult(s, 'click') })
 }
