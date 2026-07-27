@@ -2,6 +2,8 @@ import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
+import { Toaster } from '@/components/ui/sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
@@ -15,7 +17,12 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'Commit Farm — grow a codebase from garage repo to IPO',
+      },
+      {
+        name: 'description',
+        content:
+          'An idle game about writing code: hire devs, ship commits, survive on-call, and raise funding rounds.',
       },
     ],
     links: [
@@ -34,8 +41,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
-        {children}
+      {/* browser extensions (e.g. Grammarly) inject body attributes pre-hydration */}
+      <body suppressHydrationWarning>
+        <TooltipProvider>{children}</TooltipProvider>
+        <Toaster position="bottom-center" />
         <TanStackDevtools
           config={{
             position: 'bottom-right',

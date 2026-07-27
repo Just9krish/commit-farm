@@ -30,7 +30,6 @@ If you prefer not to use Tailwind CSS:
 3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
 4. Remove `@tailwindcss/vite` and `tailwindcss` from `package.json`
 
-
 ## Deploy to Netlify
 
 This project ships with `netlify.toml` configured for a Netlify site:
@@ -42,8 +41,6 @@ This project ships with `netlify.toml` configured for a Netlify site:
 5. Trigger the first deploy
 
 Server functions and API routes run on Netlify Functions. For lower-latency request handling, see Netlify Edge Functions: https://docs.netlify.com/edge-functions/overview.
-
-
 
 ## Routing
 
@@ -62,7 +59,7 @@ Now that you have two routes you can use a `Link` component to navigate between 
 To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
 
 ```tsx
-import { Link } from "@tanstack/react-router";
+import { Link } from '@tanstack/react-router'
 ```
 
 Then anywhere in your JSX you can use it like so:
@@ -130,11 +127,11 @@ const getServerTime = createServerFn({
 // Use in a component
 function MyComponent() {
   const [time, setTime] = useState('')
-  
+
   useEffect(() => {
     getServerTime().then(setTime)
   }, [])
-  
+
   return <div>Server time: {time}</div>
 }
 ```
@@ -186,8 +183,6 @@ function PeopleComponent() {
 ```
 
 Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-
 
 # Learn More
 

@@ -34,10 +34,10 @@ landing page; the game only runs after the user explicitly starts it.
 
 ## Routing
 
-| Route | Purpose |
-|-------|---------|
-| `/` | Landing page. Hero with `COMMIT_FARM` wordmark, tagline, short feature blurb, primary CTA. If a save exists: CTA reads "Continue farming" with a small save summary (lifetime LOC, stars); otherwise "Start farming". Navigates to `/game`. **No game loop runs here.** |
-| `/game` | The game. Tick loop, event system, and offline-progress calculation start when this route mounts and stop on unmount. |
+| Route   | Purpose                                                                                                                                                                                                                                                                 |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`     | Landing page. Hero with `COMMIT_FARM` wordmark, tagline, short feature blurb, primary CTA. If a save exists: CTA reads "Continue farming" with a small save summary (lifetime LOC, stars); otherwise "Start farming". Navigates to `/game`. **No game loop runs here.** |
+| `/game` | The game. Tick loop, event system, and offline-progress calculation start when this route mounts and stop on unmount.                                                                                                                                                   |
 
 ## Architecture
 
@@ -95,8 +95,13 @@ them. No game rules live in components.
   earnings accrue at the current production rate for elapsed time,
   capped at 8 hours. If away > 60 seconds, a welcome-back dialog shows
   earnings. Landing page does not trigger this.
+  **Hidden-tab behavior:** the tick loop pauses while `document.hidden`;
+  on becoming visible again, the elapsed time flows through the same
+  `offlineEarnings` path (same 8h cap, dialog only if > 60s hidden).
 - **Buy ×1 / ×10 / max:** toggle group in the shop header. `bulkCost` uses
   the geometric-series closed form; `maxAffordable` inverts it (no loops).
+  In max mode, a row's buy button is disabled when `maxAffordable` is 0 and
+  its label shows the cost of buying 1.
 - **Sound:** synthesized Web Audio blips for click, purchase, achievement,
   prestige. Mute toggle in the footer, persisted with the save. No audio
   files shipped. AudioContext created lazily on first user gesture.
@@ -143,6 +148,17 @@ them. No game rules live in components.
 - **Feature-scoped modules:** pure math in `src/game/`, per-feature UI in
   `src/components/game/`, store exposes actions only. Future features are
   new modules/routes, not rewrites.
+
+## Fidelity notes
+
+`example.html` is the source of truth for all game numbers and small
+behaviors, including: cost growth ×1.15 per owned, intern click bonus
+(+10% per intern), star multiplier (+2% per star), prestige threshold
+(1M lifetime LOC, gain = floor(sqrt(totalLoc/1e6))), event chance
+(~0.6% per 200ms tick) and durations, 35% chance a click writes a commit
+log line, log capped at 40 entries (8 shown), office floor showing at most
+60 desks per generator with a "+N" overflow chip, and the initial
+"hired you" log line on first load.
 
 ## Testing
 

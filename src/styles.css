@@ -1,17 +1,141 @@
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/700.css';
+@import '@fontsource/jetbrains-mono/800.css';
 
-@import "tailwindcss";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
-* {
-  box-sizing: border-box;
+/* Dark-only terminal theme (values from the original Commit Farm palette). */
+:root {
+  --background: #14171c;
+  --foreground: #e8e6e1;
+  --card: #1b1f26;
+  --card-foreground: #e8e6e1;
+  --popover: #1b1f26;
+  --popover-foreground: #e8e6e1;
+  --primary: #f2a93b;
+  --primary-foreground: #14171c;
+  --secondary: #232935;
+  --secondary-foreground: #e8e6e1;
+  --muted: #232935;
+  --muted-foreground: #8b929d;
+  --accent: #232935;
+  --accent-foreground: #e8e6e1;
+  --destructive: #e8735d;
+  --border: #2e3540;
+  --input: #2e3540;
+  --ring: #f2a93b;
+  --radius: 0.5rem;
 }
 
-html,
-body,
-#app {
-  min-height: 100%;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-body {
-  margin: 0;
+@theme {
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
+
+  /* game palette */
+  --color-ink: #e8e6e1;
+  --color-ink-dim: #8b929d;
+  --color-amber: #f2a93b;
+  --color-amber-dim: #8c6a2e;
+  --color-green: #7fb77e;
+  --color-blue: #6e9bef;
+  --color-panel: #1b1f26;
+  --color-panel-alt: #232935;
+
+  /* strong easings (built-in CSS easings are too weak) */
+  --ease-snappy: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-smooth: cubic-bezier(0.77, 0, 0.175, 1);
+
+  --animate-rise-in: rise-in 200ms var(--ease-snappy) both;
+  --animate-desk-in: desk-in 180ms var(--ease-snappy) both;
+  --animate-blink: blink 1.2s steps(1) infinite;
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes desk-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
 }
 
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--background);
+    background-image:
+      linear-gradient(180deg, rgba(20, 23, 28, 0.97), rgba(20, 23, 28, 0.99)),
+      repeating-linear-gradient(0deg, transparent, transparent 23px, rgba(255, 255, 255, 0.02) 24px);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+
+  ::selection {
+    background: var(--color-amber);
+    color: #14171c;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
