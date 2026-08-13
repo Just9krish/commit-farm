@@ -17,6 +17,7 @@ import type {
   GameSave,
   GeneratorDef,
   GeneratorId,
+  MetaPerkId,
   PerkId,
   UpgradeDef,
   UpgradeTarget,
@@ -38,10 +39,13 @@ export function freshSave(): GameSave {
     playTimeSec: 0,
     stars: 0,
     prestigeCount: 0,
+    equity: 0,
+    ipoCount: 0,
     generators,
     achievements: {},
     upgrades: {},
     perks: {},
+    metaPerks: {},
     isMuted: false,
     lastSavedAt: Date.now(),
   }
@@ -49,6 +53,10 @@ export function freshSave(): GameSave {
 
 export function hasPerk(save: GameSave, id: PerkId): boolean {
   return Boolean(save.perks[id])
+}
+
+export function hasMetaPerk(save: GameSave, id: MetaPerkId): boolean {
+  return Boolean(save.metaPerks[id])
 }
 
 /** Discount applied to all generator costs (preferred-terms perk). */
@@ -108,8 +116,9 @@ export function maxAffordable({
   return Math.max(qty, 1)
 }
 
-export function starMultiplier(stars: number): number {
-  return 1 + stars * STAR_BONUS
+export function starMultiplier(save: GameSave): number {
+  const bonus = hasMetaPerk(save, 'board-seat') ? 0.03 : STAR_BONUS
+  return 1 + save.stars * bonus
 }
 
 /** Each unlocked achievement grants +1% production, forever. */
@@ -169,7 +178,7 @@ export function productionRate({
   return (
     base *
     upgradeMultiplier({ save, target: 'all' }) *
-    starMultiplier(save.stars) *
+    starMultiplier(save) *
     achievementMultiplier(save) *
     eventProdMult
   )
@@ -188,7 +197,7 @@ export function clickPower({
     internBonus *
     perkMult *
     upgradeMultiplier({ save, target: 'click' }) *
-    starMultiplier(save.stars) *
+    starMultiplier(save) *
     eventClickMult
   )
 }

@@ -3,6 +3,7 @@ import type {
   EventDef,
   GeneratorDef,
   LogCategory,
+  MetaPerkDef,
   PerkDef,
   UpgradeDef,
 } from './types'
@@ -98,6 +99,14 @@ export const GENERATOR_DEFS: Array<GeneratorDef> = [
     colorClass: 'text-amber',
     baseCost: 1_400_000,
     baseProd: 1_400,
+  },
+  {
+    id: 'principal',
+    name: 'Principal Eng',
+    glyph: '⌘',
+    colorClass: 'text-indigo',
+    baseCost: 15_000_000,
+    baseProd: 15_000,
   },
 ]
 
@@ -398,6 +407,33 @@ export const PERK_DEFS: Array<PerkDef> = [
   },
 ]
 
+export const META_PERK_DEFS: Array<MetaPerkDef> = [
+  {
+    id: 'founding-engineer',
+    name: 'Founding Engineer',
+    description: 'Start every run with 1 Junior Dev already hired',
+    equityCost: 1,
+  },
+  {
+    id: 'rd-department',
+    name: 'R&D Department',
+    description: 'Unlock a 7th Generator Tier ("Principal Engineer")',
+    equityCost: 2,
+  },
+  {
+    id: 'vesting-schedule',
+    name: 'Vesting Schedule',
+    description: 'Retain 10% of your Stars upon IPO',
+    equityCost: 2,
+  },
+  {
+    id: 'board-seat',
+    name: 'Board Seat',
+    description: 'The Star passive bonus is permanently increased to +3% per Star',
+    equityCost: 3,
+  },
+]
+
 export const COMMIT_LINES: Record<LogCategory, Array<string>> = {
   buy: [
     'fix: hired {n}, forgot onboarding docs',
@@ -428,4 +464,6 @@ export const COMMIT_LINES: Record<LogCategory, Array<string>> = {
     'feat: cherry-picked a golden commit (+{n} LOC)',
     'fix: found treasure in the reflog (+{n} LOC)',
   ],
+  ipo: ['chore!: IPO — took the company public', 'feat!: rang the bell at the NYSE'],
+  'meta-perk': ['docs: board approved {p} meta-perk', 'feat: exercised equity for {p}'],
 }

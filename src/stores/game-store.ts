@@ -14,6 +14,7 @@ import {
   HEAD_START_INTERNS,
   MAX_LOG_ENTRIES,
   MAX_TICK_DELTA_SEC,
+  META_PERK_DEFS,
   PERK_DEFS,
   UPGRADE_DEFS,
   WELCOME_BACK_MIN_SEC,
@@ -26,6 +27,7 @@ import {
   formatNumber,
   freshSave,
   goldenReward,
+  hasMetaPerk,
   hasPerk,
   isUpgradeUnlocked,
   maxAffordable,
@@ -41,6 +43,7 @@ import type {
   GeneratorId,
   LogCategory,
   LogEntry,
+  MetaPerkId,
   PerkId,
 } from '@/game/types'
 import { playSound } from '@/lib/sound'
@@ -70,8 +73,10 @@ interface GameStore extends GameSave {
   buyGenerator: (id: GeneratorId) => void
   buyUpgrade: (id: string) => void
   buyPerk: (id: PerkId) => void
+  buyMetaPerk: (id: MetaPerkId) => void
   clickGoldenCommit: () => void
   prestige: () => void
+  ipo: () => void
   tick: (nowMs: number) => void
   startSession: () => void
   grantAwayEarnings: (awaySec: number) => void
@@ -151,6 +156,9 @@ function toSave(s: GameSave): GameSave {
     achievements: s.achievements,
     upgrades: s.upgrades,
     perks: s.perks,
+    metaPerks: s.metaPerks,
+    equity: s.equity,
+    ipoCount: s.ipoCount,
     isMuted: s.isMuted,
     lastSavedAt: Date.now(),
   }
@@ -167,6 +175,7 @@ function mergeSave(saved: Partial<GameSave>): GameSave {
     achievements: { ...saved.achievements },
     upgrades: { ...saved.upgrades },
     perks: { ...saved.perks },
+    metaPerks: { ...saved.metaPerks },
   }
 }
 
@@ -363,7 +372,14 @@ export const useGameStore = create<GameStore>()(
         const generators = Object.fromEntries(
           GENERATOR_DEFS.map((g) => [
             g.id,
-            { owned: g.id === 'intern' && hasPerk(s, 'head-start') ? HEAD_START_INTERNS : 0 },
+            {
+              owned:
+                g.id === 'intern' && hasPerk(s, 'head-start')
+                  ? HEAD_START_INTERNS
+                  : g.id === 'junior' && hasMetaPerk(s, 'founding-engineer')
+                    ? 1
+                    : 0,
+            },
           ]),
         ) as Record<GeneratorId, { owned: number }>
         const save: GameSave = {
@@ -388,6 +404,68 @@ export const useGameStore = create<GameStore>()(
           upgrades: {},
           ...unlocked,
         })
+      },
+
+      ipo: () => {
+        const s = get()
+        const equityGain = Math.floor(s.stars / 25)
+        if (equityGain < 1) return
+
+        const generators = Object.fromEntries(
+          GENERATOR_DEFS.map((g) => [
+            g.id,
+            {
+              owned:
+                g.id === 'intern' && hasPerk(s, 'head-start')
+                  ? HEAD_START_INTERNS
+                  : g.id === 'junior' && hasMetaPerk(s, 'founding-engineer')
+                    ? 1
+                    : 0,
+            },
+          ]),
+        ) as Record<GeneratorId, { owned: number }>
+
+        const retainedStars = hasMetaPerk(s, 'vesting-schedule') ? Math.floor(s.stars * 0.1) : 0
+
+        const save: GameSave = {
+          ...s,
+          loc: 0,
+          runLoc: 0,
+          stars: retainedStars,
+          equity: s.equity + equityGain,
+          ipoCount: s.ipoCount + 1,
+          prestigeCount: 0,
+          generators,
+          upgrades: {},
+          perks: {},
+        }
+        const log = appendLog(s.log, 'ipo')
+        const unlocked = unlockAchievements(save, log, s.isMuted)
+        if (!s.isMuted) playSound('prestige')
+        set({
+          loc: 0,
+          runLoc: 0,
+          stars: save.stars,
+          equity: save.equity,
+          ipoCount: save.ipoCount,
+          prestigeCount: 0,
+          generators,
+          upgrades: {},
+          perks: {},
+          ...unlocked,
+        })
+      },
+
+      buyMetaPerk: (id) => {
+        const s = get()
+        const def = META_PERK_DEFS.find((p) => p.id === id)
+        if (!def || s.metaPerks[def.id] || s.equity < def.equityCost) return
+        const metaPerks = { ...s.metaPerks, [def.id]: true }
+        const save: GameSave = { ...s, equity: s.equity - def.equityCost, metaPerks }
+        const log = appendLog(s.log, 'meta-perk', { p: def.name })
+        const unlocked = unlockAchievements(save, log, s.isMuted)
+        if (!s.isMuted) playSound('buy')
+        set({ equity: save.equity, metaPerks, ...unlocked })
       },
 
       tick: (nowMs) => {

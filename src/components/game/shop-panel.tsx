@@ -14,6 +14,11 @@ const QUANTITY_OPTIONS: Array<{ value: BuyQuantity; label: string }> = [
 export function ShopPanel() {
   const buyQuantity = useGameStore((s) => s.buyQuantity)
   const setBuyQuantity = useGameStore((s) => s.setBuyQuantity)
+  const hasRDDepartment = useGameStore((s) => s.metaPerks['rd-department'])
+
+  const visibleGenerators = GENERATOR_DEFS.filter(
+    (def) => def.id !== 'principal' || hasRDDepartment,
+  )
 
   return (
     <GamePanel title="Hire & build">
@@ -36,7 +41,7 @@ export function ShopPanel() {
           ))}
         </ToggleGroup>
       </div>
-      {GENERATOR_DEFS.map((def) => (
+      {visibleGenerators.map((def) => (
         <GeneratorRow key={def.id} def={def} />
       ))}
     </GamePanel>

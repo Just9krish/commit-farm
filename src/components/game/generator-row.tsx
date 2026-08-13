@@ -35,7 +35,7 @@ export const GeneratorRow = memo(function GeneratorRow({ def }: GeneratorRowProp
       const prodEach =
         def.baseProd *
         milestoneMultiplier(ownedCount) *
-        starMultiplier(s.stars) *
+        starMultiplier(s) *
         achievementMultiplier(s) *
         upgradeMultiplier({ save: s, target: def.id }) *
         upgradeMultiplier({ save: s, target: 'all' })

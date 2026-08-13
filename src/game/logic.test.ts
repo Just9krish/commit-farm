@@ -176,8 +176,10 @@ describe('prestige', () => {
   })
 
   it('star multiplier grants +2% per star', () => {
-    expect(starMultiplier(0)).toBe(1)
-    expect(starMultiplier(50)).toBeCloseTo(2)
+    const save = freshSave()
+    expect(starMultiplier(save)).toBe(1)
+    save.stars = 50
+    expect(starMultiplier(save)).toBeCloseTo(2)
   })
 })
 

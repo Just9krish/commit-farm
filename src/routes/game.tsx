@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { AchievementsPanel } from '@/components/game/achievements-panel'
 import { CodePanel } from '@/components/game/code-panel'
 import { CommitLog } from '@/components/game/commit-log'
+import { EquityPanel } from '@/components/game/equity-panel'
 import { EventBanner } from '@/components/game/event-banner'
 import { GameFooter } from '@/components/game/game-footer'
 import { GamePanel } from '@/components/game/game-panel'
@@ -33,6 +34,7 @@ function GamePage() {
       <div className="grid gap-4 md:grid-cols-[1.15fr_1fr]">
         <div className="flex flex-col gap-4">
           <CodePanel />
+          <EquityPanel />
           <StarPerksPanel />
           <GamePanel title="Commit log">
             <CommitLog />

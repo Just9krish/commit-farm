@@ -1,4 +1,5 @@
-export type GeneratorId = 'intern' | 'junior' | 'senior' | 'copilot' | 'devops' | 'manager'
+export type GeneratorId =
+  'intern' | 'junior' | 'senior' | 'copilot' | 'devops' | 'manager' | 'principal'
 
 export interface GeneratorDef {
   id: GeneratorId
@@ -66,6 +67,19 @@ export interface PerkDef {
   starCost: number
 }
 
+/**
+ * Meta-Perks are bought by SPENDING Equity (reducing nothing, just costs Equity),
+ * and persist across IPOs.
+ */
+export type MetaPerkId = 'founding-engineer' | 'board-seat' | 'rd-department' | 'vesting-schedule'
+
+export interface MetaPerkDef {
+  id: MetaPerkId
+  name: string
+  description: string
+  equityCost: number
+}
+
 /** The persisted portion of the game state. */
 export interface GameSave {
   version: number
@@ -81,10 +95,13 @@ export interface GameSave {
   playTimeSec: number
   stars: number
   prestigeCount: number
+  equity: number
+  ipoCount: number
   generators: Record<GeneratorId, GeneratorState>
   achievements: Record<string, boolean>
   upgrades: Record<string, boolean>
   perks: Record<string, boolean>
+  metaPerks: Record<string, boolean>
   isMuted: boolean
   lastSavedAt: number
 }
@@ -103,7 +120,16 @@ export interface ActiveGolden {
 }
 
 export type LogCategory =
-  'buy' | 'click' | 'prestige' | 'event' | 'ach' | 'upgrade' | 'perk' | 'golden'
+  | 'buy'
+  | 'click'
+  | 'prestige'
+  | 'event'
+  | 'ach'
+  | 'upgrade'
+  | 'perk'
+  | 'golden'
+  | 'ipo'
+  | 'meta-perk'
 
 export interface LogEntry {
   id: number
