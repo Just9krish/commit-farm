@@ -12,6 +12,7 @@ import { PrestigeCeremony } from '@/components/game/prestige-ceremony'
 import { ShopPanel } from '@/components/game/shop-panel'
 import { StarPerksPanel } from '@/components/game/star-perks-panel'
 import { StatsPanel } from '@/components/game/stats-panel'
+import { TechDebtPanel } from '@/components/game/tech-debt-panel'
 import { TopBar } from '@/components/game/top-bar'
 import { UpgradesPanel } from '@/components/game/upgrades-panel'
 import { WelcomeBackDialog } from '@/components/game/welcome-back-dialog'
@@ -38,6 +39,7 @@ function GamePage() {
       <div className="grid gap-4 md:grid-cols-[1.15fr_1fr]">
         <div className="flex flex-col gap-4">
           {hasIncident ? <IncidentMinigame /> : <CodePanel />}
+          <TechDebtPanel />
           <EquityPanel />
           <StarPerksPanel />
           <GamePanel title="Commit log">

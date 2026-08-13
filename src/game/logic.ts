@@ -40,6 +40,8 @@ export function freshSave(): GameSave {
     stars: 0,
     lifetimeStars: 0,
     prestigeCount: 0,
+    techDebt: 0,
+    isRefactoring: false,
     equity: 0,
     ipoCount: 0,
     generators,
@@ -181,8 +183,17 @@ export function productionRate({
     upgradeMultiplier({ save, target: 'all' }) *
     starMultiplier(save) *
     achievementMultiplier(save) *
+    techDebtMultiplier(save) *
     eventProdMult
   )
+}
+
+/**
+ * Tech debt applies a soft-cap penalty to production.
+ * If runLoc is 0, the base denominator prevents division by zero.
+ */
+export function techDebtMultiplier(save: GameSave): number {
+  return 1 / (1 + save.techDebt / (save.runLoc * 0.02 + 100))
 }
 
 export function clickPower({

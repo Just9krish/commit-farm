@@ -91,6 +91,7 @@ interface GameStore extends GameSave {
   dismissWelcomeBack: () => void
   setBuyQuantity: (quantity: BuyQuantity) => void
   toggleMute: () => void
+  toggleRefactoring: () => void
   resetSave: () => void
   /** Serializes the persisted save as a portable string. */
   exportSave: () => string
@@ -161,6 +162,8 @@ function toSave(s: GameSave): GameSave {
     stars: s.stars,
     lifetimeStars: s.lifetimeStars,
     prestigeCount: s.prestigeCount,
+    techDebt: s.techDebt,
+    isRefactoring: s.isRefactoring,
     generators: s.generators,
     achievements: s.achievements,
     upgrades: s.upgrades,
@@ -188,7 +191,7 @@ function mergeSave(saved: Partial<GameSave>): GameSave {
   }
 }
 
-type GainFields = Pick<GameSave, 'loc' | 'totalLoc' | 'runLoc' | 'bestRunLoc'>
+type GainFields = Pick<GameSave, 'loc' | 'totalLoc' | 'runLoc' | 'bestRunLoc' | 'techDebt'>
 
 /** All LOC gains flow through here so run/lifetime/best-run stats stay in sync. */
 function applyGain(s: GameSave, gain: number): GainFields {
@@ -198,6 +201,7 @@ function applyGain(s: GameSave, gain: number): GainFields {
     totalLoc: s.totalLoc + gain,
     runLoc,
     bestRunLoc: Math.max(s.bestRunLoc, runLoc),
+    techDebt: s.techDebt + gain * 0.05,
   }
 }
 
@@ -316,6 +320,18 @@ export const useGameStore = create<GameStore>()(
           save: s,
           eventClickMult: eventMult(s, 'click'),
         })
+
+        if (s.isRefactoring) {
+          const cleared = Math.min(s.techDebt, gain * 2)
+          set({ techDebt: s.techDebt - cleared, totalClicks: s.totalClicks + 1 })
+          let log = s.log
+          if (Math.random() < CLICK_LOG_CHANCE) log = appendLog(log, 'click')
+          const unlocked = unlockAchievements(get(), log, s.isMuted)
+          if (!s.isMuted) playSound('click')
+          set({ ...unlocked })
+          return
+        }
+
         const gained = applyGain(s, gain)
         const save: GameSave = { ...s, ...gained, totalClicks: s.totalClicks + 1 }
         let log = s.log
@@ -509,6 +525,7 @@ export const useGameStore = create<GameStore>()(
           totalLoc: s.totalLoc,
           runLoc: s.runLoc,
           bestRunLoc: s.bestRunLoc,
+          techDebt: s.techDebt,
         }
         let debuffUntil = s.debuffUntil
 
@@ -582,6 +599,22 @@ export const useGameStore = create<GameStore>()(
             save: s,
             eventProdMult: eventMult({ ...s, activeEvent }, 'prod'),
           }) * dtSec
+
+        if (s.isRefactoring) {
+          const cleared = Math.min(s.techDebt, gain * 2)
+          set({
+            techDebt: s.techDebt - cleared,
+            playTimeSec: s.playTimeSec + dtSec,
+            activeEvent,
+            golden,
+            nextGoldenAt: nextGoldenAt || get().nextGoldenAt,
+            activeIncident,
+            nextIncidentAt: nextIncidentAt || get().nextIncidentAt,
+            debuffUntil: debuffUntil !== undefined ? debuffUntil : get().debuffUntil,
+          })
+          return
+        }
+
         const gained = applyGain(s, gain)
         const save: GameSave = { ...s, ...gained }
         const unlocked = unlockAchievements(save, log, s.isMuted)
@@ -628,6 +661,8 @@ export const useGameStore = create<GameStore>()(
       dismissWelcomeBack: () => set({ welcomeBack: null }),
       setBuyQuantity: (quantity) => set({ buyQuantity: quantity }),
       toggleMute: () => set((s) => ({ isMuted: !s.isMuted })),
+
+      toggleRefactoring: () => set((s) => ({ isRefactoring: !s.isRefactoring })),
 
       resetSave: () =>
         set({

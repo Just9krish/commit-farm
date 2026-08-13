@@ -96,6 +96,8 @@ export interface GameSave {
   stars: number
   lifetimeStars: number
   prestigeCount: number
+  techDebt: number
+  isRefactoring: boolean
   equity: number
   ipoCount: number
   generators: Record<GeneratorId, GeneratorState>
