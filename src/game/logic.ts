@@ -38,6 +38,7 @@ export function freshSave(): GameSave {
     goldenClicks: 0,
     playTimeSec: 0,
     stars: 0,
+    lifetimeStars: 0,
     prestigeCount: 0,
     equity: 0,
     ipoCount: 0,
@@ -219,8 +220,9 @@ export function goldenReward(save: GameSave): number {
   )
 }
 
-export function prestigeGain(totalLoc: number): number {
-  return Math.floor(Math.sqrt(totalLoc / PRESTIGE_THRESHOLD))
+export function prestigeGain(totalLoc: number, lifetimeStars: number): number {
+  const cumulative = Math.floor(Math.sqrt(totalLoc / PRESTIGE_THRESHOLD))
+  return Math.max(0, cumulative - lifetimeStars)
 }
 
 /** LOC earned while away, capped at 8h (24h with the angel-network perk). */

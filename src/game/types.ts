@@ -94,6 +94,7 @@ export interface GameSave {
   /** Active play time in seconds (only counts while the tab is visible). */
   playTimeSec: number
   stars: number
+  lifetimeStars: number
   prestigeCount: number
   equity: number
   ipoCount: number
@@ -119,6 +120,11 @@ export interface ActiveGolden {
   expiresAt: number
 }
 
+export interface ActiveIncident {
+  hash: string
+  expiresAt: number
+}
+
 export type LogCategory =
   | 'buy'
   | 'click'
@@ -130,6 +136,7 @@ export type LogCategory =
   | 'golden'
   | 'ipo'
   | 'meta-perk'
+  | 'incident'
 
 export interface LogEntry {
   id: number

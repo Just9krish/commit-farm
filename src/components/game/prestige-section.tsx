@@ -16,13 +16,15 @@ import { useGameStore } from '@/stores/game-store'
 export function PrestigeSection() {
   const totalLoc = useGameStore((s) => s.totalLoc)
   const stars = useGameStore((s) => s.stars)
+  const lifetimeStars = useGameStore((s) => s.lifetimeStars)
   const ipo = useGameStore((s) => s.ipo)
   const prestige = useGameStore((s) => s.prestige)
 
   if (totalLoc < PRESTIGE_THRESHOLD * 0.5) return null
 
-  const gain = prestigeGain(totalLoc)
+  const gain = prestigeGain(totalLoc, lifetimeStars)
   const isReady = gain >= 1
+  const nextTargetLoc = PRESTIGE_THRESHOLD * Math.pow(lifetimeStars + 1, 2)
 
   const canIpo = stars >= 50
   const equityGain = Math.floor(stars / 25)
@@ -66,7 +68,7 @@ export function PrestigeSection() {
         <p className="mt-1.5 text-[11px] leading-relaxed text-ink-dim">
           {isReady
             ? `Reset current progress for +${gain} investor ${gain === 1 ? 'star' : 'stars'} (each star = +2% production, forever).`
-            : `Reach ${formatNumber(PRESTIGE_THRESHOLD)} lifetime LOC to unlock your first funding round. Currently ${formatNumber(totalLoc)}.`}
+            : `Reach ${formatNumber(nextTargetLoc)} lifetime LOC to unlock your ${lifetimeStars > 0 ? 'next' : 'first'} funding round. Currently ${formatNumber(totalLoc)}.`}
         </p>
       </div>
 

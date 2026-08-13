@@ -38,6 +38,7 @@ import {
 import type {
   ActiveEvent,
   ActiveGolden,
+  ActiveIncident,
   BuyQuantity,
   GameSave,
   GeneratorId,
@@ -51,6 +52,9 @@ import { playSound } from '@/lib/sound'
 const SAVE_KEY = 'commit-farm-save-v1'
 const SAVE_THROTTLE_MS = 2000
 const EXPORT_PREFIX = 'CF1.'
+const INCIDENT_MIN_GAP_SEC = 600
+const INCIDENT_MAX_GAP_SEC = 900
+const INCIDENT_LIFETIME_SEC = 15
 
 export interface WelcomeBackInfo {
   earnedLoc: number
@@ -62,6 +66,9 @@ interface GameStore extends GameSave {
   activeEvent: ActiveEvent | null
   golden: ActiveGolden | null
   nextGoldenAt: number
+  activeIncident: ActiveIncident | null
+  nextIncidentAt: number
+  debuffUntil: number | null
   log: Array<LogEntry>
   buyQuantity: BuyQuantity
   welcomeBack: WelcomeBackInfo | null
@@ -77,6 +84,7 @@ interface GameStore extends GameSave {
   clickGoldenCommit: () => void
   prestige: () => void
   ipo: () => void
+  resolveIncident: (success: boolean) => void
   tick: (nowMs: number) => void
   startSession: () => void
   grantAwayEarnings: (awaySec: number) => void
@@ -151,6 +159,7 @@ function toSave(s: GameSave): GameSave {
     goldenClicks: s.goldenClicks,
     playTimeSec: s.playTimeSec,
     stars: s.stars,
+    lifetimeStars: s.lifetimeStars,
     prestigeCount: s.prestigeCount,
     generators: s.generators,
     achievements: s.achievements,
@@ -212,6 +221,19 @@ function spawnGolden(nowMs: number): ActiveGolden {
     xPct: 15 + Math.random() * 70,
     yPct: 20 + Math.random() * 55,
     expiresAt: nowMs + GOLDEN_LIFETIME_SEC * 1000,
+  }
+}
+
+function scheduleNextIncident(nowMs: number): number {
+  const gapSec =
+    INCIDENT_MIN_GAP_SEC + Math.random() * (INCIDENT_MAX_GAP_SEC - INCIDENT_MIN_GAP_SEC)
+  return nowMs + gapSec * 1000
+}
+
+function spawnIncident(nowMs: number): ActiveIncident {
+  return {
+    hash: Math.random().toString(16).slice(2, 9),
+    expiresAt: nowMs + INCIDENT_LIFETIME_SEC * 1000,
   }
 }
 
@@ -278,6 +300,9 @@ export const useGameStore = create<GameStore>()(
       activeEvent: null,
       golden: null,
       nextGoldenAt: scheduleNextGolden(Date.now()),
+      activeIncident: null,
+      nextIncidentAt: scheduleNextIncident(Date.now()),
+      debuffUntil: null,
       log: [],
       buyQuantity: '1',
       welcomeBack: null,
@@ -367,7 +392,7 @@ export const useGameStore = create<GameStore>()(
 
       prestige: () => {
         const s = get()
-        const gain = prestigeGain(s.totalLoc)
+        const gain = prestigeGain(s.totalLoc, s.lifetimeStars)
         if (gain < 1) return
         const generators = Object.fromEntries(
           GENERATOR_DEFS.map((g) => [
@@ -387,6 +412,7 @@ export const useGameStore = create<GameStore>()(
           loc: 0,
           runLoc: 0,
           stars: s.stars + gain,
+          lifetimeStars: s.lifetimeStars + gain,
           prestigeCount: s.prestigeCount + 1,
           generators,
           // upgrades reset with the run; stars are the permanent progression
@@ -399,6 +425,7 @@ export const useGameStore = create<GameStore>()(
           loc: 0,
           runLoc: 0,
           stars: save.stars,
+          lifetimeStars: save.lifetimeStars,
           prestigeCount: save.prestigeCount,
           generators,
           upgrades: {},
@@ -431,7 +458,9 @@ export const useGameStore = create<GameStore>()(
           ...s,
           loc: 0,
           runLoc: 0,
+          totalLoc: 0, // Reset for next IPO round
           stars: retainedStars,
+          lifetimeStars: 0, // Reset so they can earn stars again from 0 LOC
           equity: s.equity + equityGain,
           ipoCount: s.ipoCount + 1,
           prestigeCount: 0,
@@ -445,7 +474,9 @@ export const useGameStore = create<GameStore>()(
         set({
           loc: 0,
           runLoc: 0,
+          totalLoc: 0,
           stars: save.stars,
+          lifetimeStars: 0,
           equity: save.equity,
           ipoCount: save.ipoCount,
           prestigeCount: 0,
@@ -466,6 +497,44 @@ export const useGameStore = create<GameStore>()(
         const unlocked = unlockAchievements(save, log, s.isMuted)
         if (!s.isMuted) playSound('buy')
         set({ equity: save.equity, metaPerks, ...unlocked })
+      },
+
+      resolveIncident: (success) => {
+        const s = get()
+        if (!s.activeIncident) return
+
+        let log = s.log
+        let gained: GainFields = {
+          loc: s.loc,
+          totalLoc: s.totalLoc,
+          runLoc: s.runLoc,
+          bestRunLoc: s.bestRunLoc,
+        }
+        let debuffUntil = s.debuffUntil
+
+        if (success) {
+          const gain = Math.floor(productionRate({ save: s }) * 300)
+          gained = applyGain(s, gain)
+          log = appendLog(log, 'incident', { n: `resolved! +${formatNumber(gain)} LOC` })
+          toast.success(`Incident resolved! +${formatNumber(gain)} LOC`)
+          if (!s.isMuted) playSound('golden')
+        } else {
+          debuffUntil = Date.now() + 60000
+          log = appendLog(log, 'incident', { n: 'failed - servers degraded' })
+          toast.error('Production degraded for 60s!')
+          if (!s.isMuted) playSound('buy') // TODO proper error sound
+        }
+
+        const save: GameSave = { ...s, ...gained }
+        const unlocked = unlockAchievements(save, log, s.isMuted)
+
+        set({
+          ...gained,
+          debuffUntil,
+          activeIncident: null,
+          nextIncidentAt: scheduleNextIncident(Date.now()),
+          ...unlocked,
+        })
       },
 
       tick: (nowMs) => {
@@ -492,6 +561,22 @@ export const useGameStore = create<GameStore>()(
           golden = spawnGolden(nowMs)
         }
 
+        let activeIncident = s.activeIncident
+        let nextIncidentAt = s.nextIncidentAt
+        if (activeIncident && nowMs > activeIncident.expiresAt) {
+          get().resolveIncident(false)
+          activeIncident = null // state will be updated by resolveIncident, but let's sync local var
+          nextIncidentAt = scheduleNextIncident(nowMs)
+        } else if (!activeIncident && nowMs >= nextIncidentAt && s.totalLoc > 1000) {
+          // Only start incidents if they have some LOC
+          activeIncident = spawnIncident(nowMs)
+        }
+
+        let debuffUntil = s.debuffUntil
+        if (debuffUntil && nowMs >= debuffUntil) {
+          debuffUntil = null
+        }
+
         const gain =
           productionRate({
             save: s,
@@ -507,6 +592,9 @@ export const useGameStore = create<GameStore>()(
           activeEvent,
           golden,
           nextGoldenAt,
+          activeIncident: activeIncident || get().activeIncident,
+          nextIncidentAt: nextIncidentAt || get().nextIncidentAt,
+          debuffUntil: debuffUntil !== undefined ? debuffUntil : get().debuffUntil,
           ...unlocked,
         })
       },
@@ -547,6 +635,9 @@ export const useGameStore = create<GameStore>()(
           activeEvent: null,
           golden: null,
           nextGoldenAt: scheduleNextGolden(Date.now()),
+          activeIncident: null,
+          nextIncidentAt: scheduleNextIncident(Date.now()),
+          debuffUntil: null,
           log: [makeLogEntry('buy', { n: 'you' })],
           welcomeBack: null,
           lastTickAt: Date.now(),
@@ -571,6 +662,9 @@ export const useGameStore = create<GameStore>()(
           activeEvent: null,
           golden: null,
           nextGoldenAt: scheduleNextGolden(Date.now()),
+          activeIncident: null,
+          nextIncidentAt: scheduleNextIncident(Date.now()),
+          debuffUntil: null,
           welcomeBack: null,
           lastTickAt: Date.now(),
         })
@@ -598,7 +692,9 @@ useGameStore.persist.onFinishHydration(() => {
 // -- selectors ---------------------------------------------------------------
 
 export function selectProductionRate(s: GameStore): number {
-  return productionRate({ save: s, eventProdMult: eventMult(s, 'prod') })
+  const base = productionRate({ save: s, eventProdMult: eventMult(s, 'prod') })
+  if (s.debuffUntil && Date.now() < s.debuffUntil) return base * 0.5
+  return base
 }
 
 export function selectClickPower(s: GameStore): number {

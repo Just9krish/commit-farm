@@ -441,6 +441,7 @@ export const COMMIT_LINES: Record<LogCategory, Array<string>> = {
     'chore: {n} joined, immediately opened a PR',
     'feat({n}): scaling the org, one desk at a time',
   ],
+  incident: ['incident: {n}'],
   click: [
     'fix: typo in prod (again)',
     'feat: shipped a tiny feature',

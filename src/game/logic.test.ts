@@ -169,10 +169,10 @@ describe('achievements', () => {
 
 describe('prestige', () => {
   it('unlocks at the 1M lifetime threshold', () => {
-    expect(prestigeGain(999_999)).toBe(0)
-    expect(prestigeGain(1_000_000)).toBe(1)
-    expect(prestigeGain(4_000_000)).toBe(2)
-    expect(prestigeGain(9_000_000)).toBe(3)
+    expect(prestigeGain(999_999, 0)).toBe(0)
+    expect(prestigeGain(1_000_000, 0)).toBe(1)
+    expect(prestigeGain(4_000_000, 0)).toBe(2)
+    expect(prestigeGain(9_000_000, 0)).toBe(3)
   })
 
   it('star multiplier grants +2% per star', () => {
