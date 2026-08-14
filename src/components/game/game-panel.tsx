@@ -9,7 +9,7 @@ export function PanelHeading({ children, className }: PanelHeadingProps) {
   return (
     <h2
       className={cn(
-        'mb-3 font-mono text-xs font-semibold tracking-[0.1em] text-ink-dim uppercase',
+        'mb-3 font-sans text-xs font-bold tracking-[0.1em] text-ink-dim uppercase',
         className,
       )}
     >
@@ -26,7 +26,7 @@ interface GamePanelProps {
 
 export function GamePanel({ title, children, className }: GamePanelProps) {
   return (
-    <section className={cn('rounded-lg border bg-panel p-4', className)}>
+    <section className={cn('rounded-lg border bg-panel p-4 backdrop-blur-md', className)}>
       <PanelHeading>{title}</PanelHeading>
       {children}
     </section>

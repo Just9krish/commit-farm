@@ -56,14 +56,14 @@ export const GeneratorRow = memo(function GeneratorRow({ def }: GeneratorRowProp
     <div
       className={cn(
         'relative mb-2 flex items-center justify-between gap-2.5 overflow-hidden rounded-md border bg-panel-alt px-2 py-2.5 transition-colors duration-200 last:mb-0',
-        canAfford && 'border-amber-dim',
+        canAfford && 'border-green/30',
       )}
     >
       {!canAfford && (
         <div
           aria-hidden
           style={{ transform: `scaleX(${progress})` }}
-          className="absolute inset-x-0 bottom-0 h-[2px] origin-left bg-amber-dim/60 transition-transform duration-300 ease-linear"
+          className="absolute inset-x-0 bottom-0 h-[2px] origin-left bg-green/40 transition-transform duration-300 ease-linear"
         />
       )}
       <div className="flex min-w-0 items-center gap-2.5">
@@ -79,7 +79,7 @@ export const GeneratorRow = memo(function GeneratorRow({ def }: GeneratorRowProp
           <div className="text-[13px] font-semibold text-ink">{def.name}</div>
           <div className="truncate font-mono text-[11px] text-ink-dim tabular-nums">
             {prodLabel} LOC/s each · owned {owned}
-            {milestoneAt !== null && <span className="text-amber-dim"> · ×2 at {milestoneAt}</span>}
+            {milestoneAt !== null && <span className="text-green/70"> · ×2 at {milestoneAt}</span>}
           </div>
         </div>
       </div>
@@ -87,7 +87,7 @@ export const GeneratorRow = memo(function GeneratorRow({ def }: GeneratorRowProp
         type="button"
         disabled={!canAfford}
         onClick={() => buyGenerator(def.id)}
-        className="min-w-[78px] flex-none rounded-[5px] border bg-panel px-2.5 py-1.5 text-right font-mono text-xs text-ink transition-[color,border-color,transform] duration-150 ease-snappy enabled:hover:border-amber enabled:hover:text-amber enabled:active:scale-[0.97] disabled:opacity-40 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="min-w-[78px] flex-none rounded-[5px] border bg-panel px-2.5 py-1.5 text-right font-mono text-xs text-ink transition-all duration-150 ease-snappy enabled:hover:border-green enabled:hover:text-green enabled:hover:shadow-[0_0_12px_rgba(0,255,65,0.15)] enabled:active:scale-[0.97] disabled:opacity-40 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
       >
         <span className="block font-bold tabular-nums">{formatNumber(cost)}</span>
         <span className="block text-[10px] text-ink-dim">buy {quantity}</span>

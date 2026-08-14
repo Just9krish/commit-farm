@@ -45,7 +45,7 @@ function WriteButton() {
           type="button"
           onClick={writeCode}
           onPointerDown={handlePointerDown}
-          className="mt-3.5 w-full rounded-lg border border-amber-dim bg-gradient-to-b from-amber/15 to-amber/5 px-2.5 py-5 font-mono text-[15px] font-bold tracking-[0.03em] text-amber transition-transform duration-100 ease-snappy select-none hover:from-amber/25 hover:to-amber/10 active:scale-[0.98] focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+          className="mt-3.5 w-full rounded-lg border border-green/30 bg-gradient-to-b from-green/10 to-green/5 px-2.5 py-5 font-mono text-[15px] font-bold tracking-[0.03em] text-green transition-all duration-300 ease-smooth select-none hover:border-green/60 hover:from-green/20 hover:to-green/10 hover:shadow-[0_0_20px_rgba(0,255,65,0.25)] active:scale-[0.98] focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
         >
           &gt; write_code()
         </button>
@@ -54,7 +54,7 @@ function WriteButton() {
             key={mote.id}
             onAnimationEnd={() => removeMote(mote.id)}
             style={{ left: mote.x, top: mote.y }}
-            className="pointer-events-none absolute z-10 animate-float-up font-mono text-[13px] font-bold text-amber tabular-nums"
+            className="pointer-events-none absolute z-10 animate-float-up font-mono text-[13px] font-bold text-green tabular-nums"
             aria-hidden
           >
             {mote.label}

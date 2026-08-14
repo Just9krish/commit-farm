@@ -51,7 +51,7 @@ const UpgradeRow = memo(function UpgradeRow({ def }: UpgradeRowProps) {
     <div
       className={cn(
         'mb-2 flex animate-rise-in items-center justify-between gap-2.5 rounded-md border bg-panel-alt px-2 py-2.5 last:mb-0',
-        canAfford && 'border-amber-dim',
+        canAfford && 'border-blue/30',
       )}
     >
       <div className="min-w-0">
@@ -62,7 +62,7 @@ const UpgradeRow = memo(function UpgradeRow({ def }: UpgradeRowProps) {
         type="button"
         disabled={!canAfford}
         onClick={() => buyUpgrade(def.id)}
-        className="min-w-[78px] flex-none rounded-[5px] border bg-panel px-2.5 py-1.5 text-right font-mono text-xs text-ink transition-[color,border-color,transform] duration-150 ease-snappy enabled:hover:border-amber enabled:hover:text-amber enabled:active:scale-[0.97] disabled:opacity-40 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="min-w-19.5 flex-none rounded-[5px] border bg-panel px-2.5 py-1.5 text-right font-mono text-xs text-ink transition-all duration-150 ease-snappy enabled:hover:border-blue enabled:hover:text-blue enabled:hover:shadow-[0_0_12px_rgba(0,209,255,0.15)] enabled:active:scale-[0.97] disabled:opacity-40 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
       >
         <span className="block font-bold tabular-nums">{formatNumber(def.cost)}</span>
         <span className="block text-[10px] text-ink-dim">install</span>

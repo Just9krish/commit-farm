@@ -37,7 +37,7 @@ export function PrestigeSection() {
             <button
               type="button"
               disabled={!isReady}
-              className="w-full rounded-md border border-destructive bg-destructive/10 p-3 font-mono text-[13px] font-bold text-destructive transition-transform duration-150 ease-snappy enabled:hover:bg-destructive/15 enabled:active:scale-[0.98] disabled:opacity-45 focus-visible:ring-[3px] focus-visible:ring-destructive/40 focus-visible:outline-none"
+              className="w-full rounded-md border border-purple/50 bg-purple/10 p-3 font-mono text-[13px] font-bold text-purple transition-all duration-150 ease-snappy enabled:hover:bg-purple/20 enabled:hover:shadow-[0_0_15px_rgba(191,0,255,0.25)] enabled:active:scale-[0.98] disabled:opacity-45 focus-visible:ring-[3px] focus-visible:ring-purple/40 focus-visible:outline-none"
             >
               raise a funding round →
             </button>
@@ -47,7 +47,7 @@ export function PrestigeSection() {
               <DialogTitle className="font-mono">Raise a funding round?</DialogTitle>
               <DialogDescription>
                 This resets your current LOC and your whole team. In exchange you get{' '}
-                <span className="font-mono font-bold text-amber">
+                <span className="font-mono font-bold text-purple">
                   +{gain} investor {gain === 1 ? 'star' : 'stars'}
                 </span>{' '}
                 — each star boosts production by 2%, forever.
@@ -58,7 +58,11 @@ export function PrestigeSection() {
                 <Button variant="ghost">keep grinding</Button>
               </DialogClose>
               <DialogClose asChild>
-                <Button variant="destructive" onClick={prestige} className="font-mono">
+                <Button
+                  variant="outline"
+                  onClick={prestige}
+                  className="font-mono border-purple text-purple hover:bg-purple/10"
+                >
                   close the round →
                 </Button>
               </DialogClose>
